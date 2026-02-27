@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AstroGuard — Space Debris AI Intelligence</title>
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <style>
+    :root {
+      --bg: #06090f;
+      --bg-card: #0d1420;
+      --bg-card2: #111827;
+      --border: #1e2d45;
+      --cyan: #00d4ff;
+      --cyan-dim: #00a8cc;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+      --orange: #ff6b35;
+      --red: #ff3355;
+      --text: #e2e8f0;
+      --text-dim: #64748b;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Stars background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5) 0%, transparent 100%),
+        radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 85% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 15% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.2) 0%, transparent 100%),
+        radial-gradient(1px 1px at 40% 50%, rgba(255,255,255,0.3) 0%, transparent 100%),
+        radial-gradient(1px 1px at 90% 25%, rgba(255,255,255,0.4) 0%, transparent 100%),
+        radial-gradient(1px 1px at 5% 45%, rgba(255,255,255,0.2) 0%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      z-index: 10;
+      background: linear-gradient(135deg, #080d19 0%, #0d1b2e 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      box-shadow: 0 4px 24px rgba(0,212,255,0.08);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--cyan), #0070ff);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 16px rgba(0,212,255,0.4);
+    }
+
+    .logo-text {
+      font-size: 1.3rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      background: linear-gradient(90deg, var(--cyan), #fff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-sub {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: -2px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.2);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.75rem;
+      color: var(--green);
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .header-clock {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: 'Courier New', monospace;
+    }
+
+    .refresh-btn {
+      background: rgba(0,212,255,0.1);
+      border: 1px solid rgba(0,212,255,0.3);
+      color: var(--cyan);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .refresh-btn:hover {
+      background: rgba(0,212,255,0.2);
+      box-shadow: 0 0 12px rgba(0,212,255,0.3);
+    }
+
+    /* ── Layout ── */
+    main {
+      position: relative;
+      z-index: 1;
+      padding: 1.5rem 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* ── Stats Row ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.2rem 1.4rem;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent-color, var(--cyan));
+    }
+
+    .stat-card:hover {
+      border-color: rgba(0,212,255,0.3);
+    }
+
+    .stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-color, var(--cyan));
+      line-height: 1;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Content Grid ── */
+    .content-grid {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 1100px) {
+      .content-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.4rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title-icon {
+      width: 20px;
+      height: 20px;
+      background: rgba(0,212,255,0.15);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    .card-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .badge-danger { background: rgba(255,51,85,0.15); color: var(--red); border: 1px solid rgba(255,51,85,0.3); }
+    .badge-warn { background: rgba(255,107,53,0.15); color: var(--orange); border: 1px solid rgba(255,107,53,0.3); }
+    .badge-info { background: rgba(0,212,255,0.1); color: var(--cyan); border: 1px solid rgba(0,212,255,0.2); }
+    .badge-success { background: rgba(0,255,136,0.1); color: var(--green); border: 1px solid rgba(0,255,136,0.2); }
+
+    /* ── Conjunction Table ── */
+    .table-container {
+      overflow-x: auto;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+
+    .table-container::-webkit-scrollbar { width: 6px; height: 6px; }
+    .table-container::-webkit-scrollbar-track { background: var(--bg); }
+    .table-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    thead th {
+      padding: 0.6rem 1rem;
+      text-align: left;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      background: rgba(0,0,0,0.3);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(30,45,69,0.5);
+      transition: background 0.15s;
+      cursor: pointer;
+    }
+    tbody tr:hover { background: rgba(0,212,255,0.04); }
+
+    td {
+      padding: 0.7rem 1rem;
+      vertical-align: middle;
+    }
+
+    .risk-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .risk-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .sat-name {
+      font-weight: 500;
+      color: var(--text);
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .debris-name {
+      color: var(--text-muted);
+      max-width: 130px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.78rem;
+    }
+
+    .anomaly-tag {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.6rem;
+      background: rgba(255,204,0,0.15);
+      color: var(--yellow);
+      border: 1px solid rgba(255,204,0,0.3);
+      margin-left: 4px;
+    }
+
+    .mono { font-family: 'Courier New', monospace; }
+    .dim { color: var(--text-muted); }
+
+    /* ── Risk Panel ── */
+    .risk-summary {
+      padding: 1.2rem;
+    }
+
+    .risk-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .risk-bar-label {
+      width: 72px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .risk-bar-track {
+      flex: 1;
+      height: 6px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .risk-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.8s ease;
+    }
+
+    .risk-bar-count {
+      width: 24px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* ── Plot Container ── */
+    #orbit-plot {
+      width: 100%;
+      height: 400px;
+    }
+
+    /* ── Bottom Row ── */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── Detail Panel ── */
+    .detail-panel {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      z-index: 1000;
+      min-width: 400px;
+      max-width: 560px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    }
+
+    .detail-panel.open { display: block; }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 999;
+      backdrop-filter: blur(2px);
+    }
+    .overlay.open { display: block; }
+
+    .detail-close {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 1.3rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .detail-close:hover { color: var(--text); }
+
+    .detail-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      padding-right: 2rem;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid rgba(30,45,69,0.6);
+      font-size: 0.82rem;
+    }
+
+    .detail-row:last-of-type { border-bottom: none; }
+
+    .detail-key { color: var(--text-muted); }
+    .detail-val { font-weight: 500; }
+
+    .detail-rec {
+      margin-top: 1rem;
+      padding: 0.8rem 1rem;
+      background: rgba(0,212,255,0.06);
+      border: 1px solid rgba(0,212,255,0.15);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--cyan);
+      line-height: 1.5;
+    }
+
+    .detail-explanation {
+      margin-top: 0.75rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── Feature Importance ── */
+    #feature-chart { width: 100%; height: 240px; }
+
+    /* ── Loading ── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+
+    .loading-logo {
+      font-size: 2.5rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--cyan), #fff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 4px;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(0,212,255,0.1);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .loading-steps {
+      list-style: none;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .loading-steps li.done { color: var(--green); }
+    .loading-steps li.active { color: var(--cyan); }
+
+    /* ── No data ── */
+    .empty-state {
+      padding: 3rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+    }
+
+    .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+    /* ── Tooltip ── */
+    .tooltip-text {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loading">
+  <div class="loading-logo">ASTROGUARD</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Initializing AI Systems</div>
+  <ul class="loading-steps" id="loading-steps">
+    <li id="step-model">⏳ Training Random Forest model...</li>
+    <li id="step-data">⏳ Fetching TLE orbital data...</li>
+    <li id="step-analysis">⏳ Running conjunction analysis...</li>
+    <li id="step-done">⏳ Preparing dashboard...</li>
+  </ul>
+</div>
+
+<!-- Detail Modal -->
+<div class="overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <button class="detail-close" onclick="closeDetail()">&times;</button>
+  <div class="detail-title" id="detail-title"></div>
+  <div id="detail-content"></div>
+</div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🛡</div>
+    <div>
+      <div class="logo-text">ASTROGUARD</div>
+      <div class="logo-sub">Space Debris AI Intelligence</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <span id="status-text">CONNECTING</span>
+    </div>
+    <div class="header-clock" id="clock"></div>
+    <button class="refresh-btn" onclick="refreshData()">⟳ Refresh</button>
+  </div>
+</header>
+
+<main>
+  <!-- Stats Row -->
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-card" style="--accent-color: var(--cyan)">
+      <div class="stat-label">Objects Tracked</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-sub">Satellites + Debris</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--green)">
+      <div class="stat-label">Active Satellites</div>
+      <div class="stat-value" id="stat-sats">—</div>
+      <div class="stat-sub">Under monitoring</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--text-dim)">
+      <div class="stat-label">Debris Objects</div>
+      <div class="stat-value" id="stat-debris" style="color: var(--text-muted)">—</div>
+      <div class="stat-sub">Tracked fragments</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--orange)">
+      <div class="stat-label">High Risk Events</div>
+      <div class="stat-value" id="stat-high">—</div>
+      <div class="stat-sub">Next 24 hours</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--red)">
+      <div class="stat-label">Critical Events</div>
+      <div class="stat-value" id="stat-critical">—</div>
+      <div class="stat-sub">Immediate action</div>
+    </div>
+    <div class="stat-card" style="--accent-color: var(--yellow)">
+      <div class="stat-label">AI Anomalies</div>
+      <div class="stat-value" id="stat-anomalies">—</div>
+      <div class="stat-sub">Unusual patterns</div>
+    </div>
+    <div class="stat-card" style="--accent-color: #8b5cf6">
+      <div class="stat-label">Model Accuracy</div>
+      <div class="stat-value" id="stat-accuracy" style="color: #8b5cf6">—</div>
+      <div class="stat-sub">Validation set</div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="content-grid">
+    <!-- Conjunction Table -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon">⚡</div>
+          Conjunction Events — Next 24h
+        </div>
+        <div style="display:flex; gap:8px; align-items:center">
+          <span class="card-badge badge-info" id="total-events-badge">0 events</span>
+          <select id="risk-filter" onchange="loadConjunctions()" style="background:var(--bg-card2); border:1px solid var(--border); color:var(--text-muted); border-radius:6px; padding:3px 8px; font-size:0.72rem; cursor:pointer">
+            <option value="0">All Risk</option>
+            <option value="1">≥ Medium</option>
+            <option value="2">≥ High</option>
+            <option value="3">Critical Only</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>RISK</th>
+              <th>SATELLITE</th>
+              <th>DEBRIS OBJECT</th>
+              <th>MISS DIST</th>
+              <th>REL VEL</th>
+              <th>Pc</th>
+              <th>ALT</th>
+              <th>TCA (UTC)</th>
+            </tr>
+          </thead>
+          <tbody id="conjunction-tbody">
+            <tr><td colspan="8" class="empty-state">
+              <div class="empty-icon">🛰</div>Loading conjunction data...
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Risk Summary Panel -->
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-title-icon">📊</div>
+            Risk Distribution
+          </div>
+        </div>
+        <div class="risk-summary" id="risk-summary">
+          <div class="empty-state" style="padding:1.5rem">Loading...</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <div class="card-title-icon">🧠</div>
+            AI Model Insights
+          </div>
+          <span class="card-badge badge-info">Random Forest</span>
+        </div>
+        <div id="feature-chart-wrap" style="padding: 0.5rem">
+          <div id="feature-chart"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row -->
+  <div class="bottom-grid">
+    <!-- Orbit Visualization -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon">🌍</div>
+          Orbital Ground Tracks
+        </div>
+        <span class="card-badge badge-info">Live Positions</span>
+      </div>
+      <div id="orbit-plot"></div>
+    </div>
+
+    <!-- Altitude Distribution -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-title-icon">📡</div>
+          Conjunction Altitude Distribution
+        </div>
+      </div>
+      <div id="alt-chart" style="width:100%; height:400px;"></div>
+    </div>
+  </div>
+
+  <!-- Data Source / Footer -->
+  <div style="margin-top:1.5rem; text-align:center; font-size:0.72rem; color:var(--text-dim)">
+    Data source: <span id="data-source-label">Celestrak TLE catalog</span> &nbsp;|&nbsp;
+    Last updated: <span id="last-updated">—</span> &nbsp;|&nbsp;
+    AstroGuard v1.0 &copy; 2026
+  </div>
+</main>
+
+<script>
+const API = '';  // Same origin
+
+// ─── Clock ────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toUTCString().replace('GMT', 'UTC').slice(5, -4);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── Risk helpers ─────────────────────────────────────────────────────────────
+const RISK_COLORS = { 0: '#00ff88', 1: '#ffcc00', 2: '#ff6b35', 3: '#ff3355' };
+const RISK_LABELS = { 0: 'LOW', 1: 'MEDIUM', 2: 'HIGH', 3: 'CRITICAL' };
+const RISK_BG = {
+  0: 'rgba(0,255,136,0.1)',
+  1: 'rgba(255,204,0,0.12)',
+  2: 'rgba(255,107,53,0.12)',
+  3: 'rgba(255,51,85,0.12)',
+};
+
+function riskBadge(level) {
+  const color = RISK_COLORS[level];
+  const bg = RISK_BG[level];
+  const label = RISK_LABELS[level];
+  return `<span class="risk-badge" style="background:${bg};color:${color};border:1px solid ${color}40">
+    <span class="risk-dot" style="background:${color}"></span>${label}
+  </span>`;
+}
+
+function formatPc(pc) {
+  if (pc === 0) return '<span class="dim">< 1e-10</span>';
+  const exp = Math.floor(Math.log10(pc));
+  const mant = (pc / Math.pow(10, exp)).toFixed(1);
+  return `<span class="mono">${mant}×10<sup>${exp}</sup></span>`;
+}
+
+function formatDist(km) {
+  if (km < 1) return `<span class="mono">${(km*1000).toFixed(0)} m</span>`;
+  return `<span class="mono">${km.toFixed(3)} km</span>`;
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  return d.toUTCString().slice(5, 22);
+}
+
+// ─── Load Stats ────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const r = await fetch(`${API}/api/statistics`);
+  if (!r.ok) return;
+  const d = await r.json();
+  document.getElementById('stat-total').textContent = d.total_objects_tracked.toLocaleString();
+  document.getElementById('stat-sats').textContent = d.active_satellites.toLocaleString();
+  document.getElementById('stat-debris').textContent = d.debris_objects.toLocaleString();
+  document.getElementById('stat-high').textContent = d.high_risk_conjunctions;
+  document.getElementById('stat-critical').textContent = d.critical_conjunctions;
+  document.getElementById('stat-anomalies').textContent = d.anomalies_detected;
+  document.getElementById('stat-accuracy').textContent = (d.model_accuracy * 100).toFixed(1) + '%';
+  document.getElementById('last-updated').textContent = new Date(d.last_updated_iso).toUTCString().slice(5, 25);
+  renderRiskSummary(d);
+}
+
+// ─── Risk Summary ─────────────────────────────────────────────────────────────
+function renderRiskSummary(stats) {
+  const total = Math.max(stats.total_conjunctions_24h, 1);
+  const counts = {
+    3: stats.critical_conjunctions,
+    2: stats.high_risk_conjunctions,
+    1: Math.max(0, stats.total_conjunctions_24h - stats.high_risk_conjunctions - stats.critical_conjunctions),
+    0: 0,
+  };
+  counts[0] = Math.max(0, total - counts[1] - counts[2] - counts[3]);
+
+  const html = [3, 2, 1, 0].map(level => {
+    const pct = Math.round((counts[level] / total) * 100);
+    return `<div class="risk-bar-row">
+      <div class="risk-bar-label" style="color:${RISK_COLORS[level]}">${RISK_LABELS[level]}</div>
+      <div class="risk-bar-track">
+        <div class="risk-bar-fill" style="width:${pct}%;background:${RISK_COLORS[level]}"></div>
+      </div>
+      <div class="risk-bar-count">${counts[level]}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('risk-summary').innerHTML = html +
+    `<div style="margin-top:1rem;font-size:0.72rem;color:var(--text-dim)">
+      Total: <strong style="color:var(--text)">${stats.total_conjunctions_24h}</strong> events in next 24h
+    </div>`;
+}
+
+// ─── Load Conjunctions ─────────────────────────────────────────────────────────
+let allConjunctions = [];
+
+async function loadConjunctions() {
+  const minRisk = document.getElementById('risk-filter').value;
+  const r = await fetch(`${API}/api/conjunctions?min_risk=${minRisk}&limit=50`);
+  if (!r.ok) return;
+  allConjunctions = await r.json();
+
+  document.getElementById('total-events-badge').textContent = `${allConjunctions.length} events`;
+
+  const tbody = document.getElementById('conjunction-tbody');
+  if (allConjunctions.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">
+      <div class="empty-icon">✅</div>No conjunction events found at this risk level.
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = allConjunctions.map((c, i) => `
+    <tr onclick="showDetail(${i})">
+      <td>${riskBadge(c.risk_level)}${c.is_anomaly ? '<span class="anomaly-tag">ANOMALY</span>' : ''}</td>
+      <td><div class="sat-name">${c.object1_name}</div></td>
+      <td><div class="debris-name">${c.object2_name}</div><span style="font-size:0.65rem;color:var(--text-dim)">${c.object2_type}</span></td>
+      <td>${formatDist(c.miss_distance_km)}</td>
+      <td><span class="mono">${c.relative_velocity_km_s.toFixed(2)} km/s</span></td>
+      <td>${formatPc(c.collision_probability)}</td>
+      <td><span class="mono">${c.altitude_km} km</span></td>
+      <td style="font-size:0.75rem;color:var(--text-muted)">${formatTime(c.tca_iso)}</td>
+    </tr>
+  `).join('');
+
+  renderAltChart(allConjunctions);
+}
+
+// ─── Detail Panel ─────────────────────────────────────────────────────────────
+function showDetail(idx) {
+  const c = allConjunctions[idx];
+  if (!c) return;
+
+  document.getElementById('detail-title').innerHTML =
+    `${riskBadge(c.risk_level)} &nbsp; ${c.object1_name} × ${c.object2_name}`;
+
+  const rows = [
+    ['Event ID', c.id],
+    ['Miss Distance', `${c.miss_distance_km.toFixed(4)} km`],
+    ['Relative Velocity', `${c.relative_velocity_km_s.toFixed(4)} km/s`],
+    ['Collision Probability', c.collision_probability.toExponential(3)],
+    ['Altitude at TCA', `${c.altitude_km} km`],
+    ['Time of Closest Approach', formatTime(c.tca_iso)],
+    ['Debris Type', c.object2_type],
+    ['AI Anomaly Flag', c.is_anomaly ? '⚠ YES — unusual pattern' : '✓ Normal'],
+  ];
+
+  document.getElementById('detail-content').innerHTML =
+    rows.map(([k, v]) => `<div class="detail-row">
+      <span class="detail-key">${k}</span>
+      <span class="detail-val">${v}</span>
+    </div>`).join('') +
+    `<div class="detail-rec">💡 ${c.recommendation}</div>`;
+
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+// ─── Altitude Chart ────────────────────────────────────────────────────────────
+function renderAltChart(conjunctions) {
+  const alts = conjunctions.map(c => c.altitude_km);
+  const colors = conjunctions.map(c => RISK_COLORS[c.risk_level]);
+
+  Plotly.newPlot('alt-chart', [{
+    type: 'histogram',
+    x: alts,
+    nbinsx: 20,
+    marker: {
+      color: 'rgba(0,212,255,0.6)',
+      line: { color: 'rgba(0,212,255,0.9)', width: 1 },
+    },
+    hovertemplate: 'Alt: %{x:.0f} km<br>Count: %{y}<extra></extra>',
+  }], {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    margin: { t: 20, b: 50, l: 50, r: 20 },
+    font: { color: '#64748b', size: 11 },
+    xaxis: {
+      title: 'Altitude (km)',
+      gridcolor: '#1e2d45',
+      zerolinecolor: '#1e2d45',
+      color: '#64748b',
+    },
+    yaxis: {
+      title: 'Events',
+      gridcolor: '#1e2d45',
+      zerolinecolor: '#1e2d45',
+      color: '#64748b',
+    },
+    bargap: 0.05,
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ─── Feature Importance Chart ──────────────────────────────────────────────────
+async function loadFeatureImportance() {
+  const r = await fetch(`${API}/api/model/features`);
+  if (!r.ok) return;
+  const d = await r.json();
+  const fi = d.feature_importances;
+  const sorted = Object.entries(fi).sort((a, b) => b[1] - a[1]);
+  const labels = sorted.map(([k]) => k.replace(/_/g, ' '));
+  const values = sorted.map(([, v]) => v);
+
+  Plotly.newPlot('feature-chart', [{
+    type: 'bar',
+    orientation: 'h',
+    x: values,
+    y: labels,
+    marker: {
+      color: values.map((v, i) => `rgba(0,212,255,${0.3 + 0.7 * (v / Math.max(...values))})`),
+      line: { color: 'rgba(0,212,255,0.5)', width: 1 },
+    },
+    hovertemplate: '%{y}: %{x:.4f}<extra></extra>',
+  }], {
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    margin: { t: 10, b: 30, l: 130, r: 20 },
+    font: { color: '#64748b', size: 10 },
+    xaxis: { gridcolor: '#1e2d45', color: '#64748b', title: 'Importance' },
+    yaxis: { gridcolor: '#1e2d45', color: '#94a3b8' },
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ─── Orbit Plot ────────────────────────────────────────────────────────────────
+async function loadOrbitPlot() {
+  const r = await fetch(`${API}/api/visualize/orbits?limit=8`);
+  if (!r.ok) return;
+  const d = await r.json();
+
+  // Build a simple world map outline + orbit ground tracks
+  const traces = [];
+
+  // Earth sphere (simplified as equirectangular lat/lon grid)
+  const lats = [], lons = [];
+  for (let lat = -90; lat <= 90; lat += 10) {
+    for (let lon = -180; lon <= 180; lon += 5) { lats.push(lat); lons.push(lon); }
+  }
+
+  d.orbits.forEach((orbit, i) => {
+    const pts = orbit.points;
+    if (!pts || pts.length === 0) return;
+    const isDebris = orbit.type === 'DEBRIS';
+    const color = isDebris ? '#ff3355' : `hsl(${180 + i * 30}, 80%, 60%)`;
+
+    traces.push({
+      type: 'scattergeo',
+      lon: pts.map(p => p.lon),
+      lat: pts.map(p => p.lat),
+      mode: 'lines',
+      name: orbit.name,
+      line: { color, width: isDebris ? 1 : 1.5, dash: isDebris ? 'dot' : 'solid' },
+      opacity: 0.7,
+      hovertemplate: `${orbit.name}<br>Lat: %{lat:.1f}°<br>Lon: %{lon:.1f}°<extra></extra>`,
+    });
+
+    // Current position dot
+    if (pts.length > 0) {
+      const p0 = pts[0];
+      traces.push({
+        type: 'scattergeo',
+        lon: [p0.lon],
+        lat: [p0.lat],
+        mode: 'markers',
+        showlegend: false,
+        marker: { size: isDebris ? 5 : 8, color, symbol: isDebris ? 'x' : 'circle' },
+        hovertemplate: `${orbit.name}<br>${p0.alt.toFixed(0)} km<extra></extra>`,
+      });
+    }
+  });
+
+  Plotly.newPlot('orbit-plot', traces, {
+    geo: {
+      showland: true,
+      landcolor: '#0d1420',
+      showocean: true,
+      oceancolor: '#06090f',
+      showcoastlines: true,
+      coastlinecolor: '#1e2d45',
+      showframe: false,
+      bgcolor: 'transparent',
+      projection: { type: 'natural earth' },
+      lataxis: { gridcolor: '#1e2d45' },
+      lonaxis: { gridcolor: '#1e2d45' },
+    },
+    paper_bgcolor: 'transparent',
+    plot_bgcolor: 'transparent',
+    margin: { t: 0, b: 0, l: 0, r: 0 },
+    font: { color: '#64748b', size: 10 },
+    legend: {
+      bgcolor: 'rgba(13,20,32,0.8)',
+      bordercolor: '#1e2d45',
+      borderwidth: 1,
+      font: { size: 9, color: '#94a3b8' },
+    },
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ─── Refresh ───────────────────────────────────────────────────────────────────
+async function refreshData() {
+  await fetch(`${API}/api/refresh`, { method: 'POST' });
+  setTimeout(() => { loadStats(); loadConjunctions(); }, 3000);
+}
+
+// ─── Status Check ──────────────────────────────────────────────────────────────
+async function checkStatus() {
+  try {
+    const r = await fetch(`${API}/api/status`);
+    if (!r.ok) return false;
+    const d = await r.json();
+    document.getElementById('data-source-label').textContent =
+      d.data_source === 'celestrak' ? 'Celestrak TLE catalog (live)' : 'Embedded demo data';
+    return d.status === 'ready';
+  } catch { return false; }
+}
+
+// ─── Boot Sequence ─────────────────────────────────────────────────────────────
+async function boot() {
+  const steps = ['step-model', 'step-data', 'step-analysis', 'step-done'];
+  const labels = [
+    '✓ Random Forest model trained',
+    '✓ TLE orbital data loaded',
+    '✓ Conjunction analysis complete',
+    '✓ Dashboard ready',
+  ];
+
+  let ready = false;
+  let attempt = 0;
+
+  while (!ready && attempt < 40) {
+    await new Promise(r => setTimeout(r, 1500));
+    attempt++;
+    ready = await checkStatus();
+
+    // Animate loading steps
+    const stepIdx = Math.min(Math.floor(attempt / 10), 3);
+    for (let i = 0; i <= stepIdx && i < steps.length; i++) {
+      const el = document.getElementById(steps[i]);
+      if (el) {
+        el.textContent = i < stepIdx ? labels[i] : `⟳ ${labels[i].slice(2)}`;
+        el.className = i < stepIdx ? 'done' : 'active';
+      }
+    }
+  }
+
+  // Mark all done
+  steps.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = labels[i]; el.className = 'done'; }
+  });
+
+  if (ready) {
+    document.getElementById('status-text').textContent = 'LIVE';
+    await Promise.all([loadStats(), loadConjunctions(), loadFeatureImportance(), loadOrbitPlot()]);
+    await new Promise(r => setTimeout(r, 400));
+    document.getElementById('loading').style.opacity = '0';
+    document.getElementById('loading').style.transition = 'opacity 0.5s';
+    setTimeout(() => { document.getElementById('loading').style.display = 'none'; }, 500);
+  } else {
+    document.querySelector('.loading-text').textContent = 'Connection timeout — check if server is running';
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
