@@ -203,9 +203,3 @@ space-ai-task/
 
 - `technical_docs.md` — full architecture, algorithm descriptions, API schema, performance characteristics
 - `pitch_deck.md` — 15-slide investor presentation: problem, solution, market, business model, roadmap
-
----
-
-## License
-
-MIT
